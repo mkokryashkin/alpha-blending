@@ -1,0 +1,26 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/maxim/Programming/AsmCourse/alpha-blending/main.cpp
+iostream
+-
+fstream
+-
+cstring
+-
+cstdio
+-
+memory
+-
+emmintrin.h
+-
+immintrin.h
+-
+smmintrin.h
+-
+

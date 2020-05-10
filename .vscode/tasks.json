@@ -10,6 +10,7 @@
             "args": [
                 "-g",
                 "${file}",
+                "-march=native",
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}"
             ],

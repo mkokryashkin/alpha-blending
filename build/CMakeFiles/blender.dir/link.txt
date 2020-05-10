@@ -1,0 +1,1 @@
+/usr/bin/c++  -march=native -O3   CMakeFiles/blender.dir/main.cpp.o  -o blender 

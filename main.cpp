@@ -3,29 +3,15 @@
 #include <cstring>
 #include <cstdio>
 #include <memory>
+#include <emmintrin.h>
+#include <immintrin.h>
+#include <smmintrin.h>
 
 const int BMP_HEADER_END = 0x8a;
 const int BYTES_PER_PIXEL = 4;
 const unsigned char MAX_ALPHA = 255;
 const int MAX_ALPHA_POW = 8;
 
-void _mm_mullo_pi16(unsigned int* first_block, unsigned int* second_block) {
-    for(int i = 0; i < 4; ++i) {
-        *(first_block + i) = *(first_block + i) * (*second_block + i);
-    }
-}
-
-void _mm256_add_epi8(unsigned int* first_block, unsigned int* second_block) {
-    for(int i = 0; i < 4; ++i) {
-        *(first_block + i) = *(first_block + i) + *(second_block + i);
-    }
-} 
-
-void _mm_sra_epi16(unsigned int* block, int count) {
-    for(int i = 0; i < 4; ++i) {
-        *(block + i) = *(block + i) >> count;
-    }
-}
 
 class FileCloser {
     public:
@@ -117,26 +103,31 @@ class BMPFile {
             for(int i = BMP_HEADER_END; i < size_; i += BYTES_PER_PIXEL){
                 unsigned char src_alpha = other.data_[i + 3];
 
-                unsigned int dest_colors[4] = {};
-                unsigned int src_colors[4] = {};
-                unsigned int alpha_blocks[4] = {};
-                unsigned int src_alpha_blocks[4] = {};
+                int* dest_pixel_pointer = reinterpret_cast<int*>(data_ + i);
+                __m128i dest_colors = _mm_cvtsi32_si128(*dest_pixel_pointer);     //loaded pixel data to first 32 bits of vector
+                int src_pixel = *(reinterpret_cast<int*>(other.data_ + i));
+                __m128i src_colors = _mm_cvtsi32_si128(src_pixel); 
 
-                for(int j = 0; j < 3; ++j){
-                    dest_colors[j] = data_[i + j];
-                    src_colors[j] = other.data_[i + j];
-                    alpha_blocks[j] = MAX_ALPHA - src_alpha;
-                    src_alpha_blocks[j] = src_alpha;
-                }
+                __m128i src_alpha_vec = _mm_set1_epi32(src_alpha); //load vector of 4 instances of 8-bit alpha
+                __m128i alpha_vec = _mm_set1_epi32(MAX_ALPHA - src_alpha);
 
-                _mm_mullo_pi16(dest_colors, alpha_blocks);
-                _mm_mullo_pi16(src_colors, src_alpha_blocks);
-                _mm256_add_epi8(src_colors, dest_colors);
-                _mm_sra_epi16(src_colors, MAX_ALPHA_POW);
+                //mask for rearraging RGB pixels data
+                __m128i mask = _mm_setr_epi8(0, 0x80, 0x80, 0x80, 1, 0x80, 0x80, 0x80, 2, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80); 
+                dest_colors = _mm_shuffle_epi8(dest_colors, mask);
+                src_colors = _mm_shuffle_epi8(src_colors, mask); // rearranging rgb data
 
-                for(int j = 0; j < 3; ++j){
-                    data_[i + j] = static_cast<char>(src_colors[j]);
-                }
+
+                dest_colors = _mm_mullo_epi32(dest_colors, alpha_vec); //applying alpha to dest
+                src_colors = _mm_mullo_epi32(src_colors, src_alpha_vec); //applying alpha to src
+                src_colors = _mm_add_epi32(src_colors, dest_colors);
+
+                __m128i shift =  _mm_setr_epi32(MAX_ALPHA_POW, 0, 0, 0); 
+                src_colors = _mm_sra_epi32(src_colors, shift);
+
+                __m128i rev_mask = _mm_setr_epi8(0, 4, 8, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80);
+                src_colors = _mm_shuffle_epi8(src_colors, rev_mask);
+
+                *dest_pixel_pointer = _mm_cvtsi128_si32(src_colors);
                 data_[i + 3] = MAX_ALPHA;
             }
         }
