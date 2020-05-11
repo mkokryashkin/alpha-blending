@@ -13,43 +13,36 @@ const unsigned char MAX_ALPHA = 255;
 const int MAX_ALPHA_POW = 8;
 
 
-class FileCloser {
-    public:
-        FileCloser() = default;
-        ~FileCloser() = default;
-        void operator()(FILE* file_pointer) {
-            if(file_pointer) {
-                fclose(file_pointer);
-            }
-        }
-};
-
 class BMPFile {
     private:
-        unsigned char* data_ = nullptr;
+        std::unique_ptr<unsigned char> data_;
         long long size_ = 0;
 
-        void ClearData() {
-            if(data_) {
-                delete[] data_;
-            }
-        }
+        class FileCloser {
+            public:
+                FileCloser() = default;
+                ~FileCloser() = default;
+                void operator()(FILE* file_pointer) {
+                    if(file_pointer) {
+                        fclose(file_pointer);
+                    }
+                }
+        };
 
     public:
         BMPFile() noexcept : data_(nullptr), size_(0){}
+        ~BMPFile() = default;
 
         BMPFile(const BMPFile& other) {
-            ClearData();
             size_ = other.size_;
-            data_ = new unsigned char[other.size_]();
-            memcpy(data_, other.data_, size_);   
+            data_ = std::unique_ptr<unsigned char>(new unsigned char[other.size_]());
+            memcpy(data_.get(), other.data_.get(), size_);   
         }
 
         BMPFile& operator=(const BMPFile& other) {
-            ClearData();
             size_ = other.size_;
-            data_ = new unsigned char[other.size_]();
-            memcpy(data_, other.data_, size_);
+            data_ = std::unique_ptr<unsigned char>(new unsigned char[other.size_]());
+            memcpy(data_.get(), other.data_.get(), size_);
             
             return *this;
         }
@@ -63,10 +56,6 @@ class BMPFile {
             return *this;
         }
 
-        ~BMPFile() {
-            ClearData();
-        }
-
         BMPFile(const char* filename) {
             auto bmp_file = std::unique_ptr<FILE, FileCloser>(fopen(filename, "r"), FileCloser());
 
@@ -78,8 +67,8 @@ class BMPFile {
             size_ = ftell(bmp_file.get());
             fseek(bmp_file.get(), 0, SEEK_SET);
 
-            data_ = new unsigned char[size_]();
-            fread(data_, sizeof(unsigned char), size_, bmp_file.get());
+            data_ = std::unique_ptr<unsigned char>(new unsigned char[size_]());
+            fread(data_.get(), sizeof(unsigned char), size_, bmp_file.get());
         }
 
         long long Size() const noexcept {
@@ -87,12 +76,12 @@ class BMPFile {
         }
 
         const unsigned char* Data() const noexcept {
-            return data_;
+            return data_.get();
         }
 
         void SaveToFile(const char* filename) {
             auto bmp_file = std::unique_ptr<FILE, FileCloser>(fopen(filename, "w"), FileCloser());
-            fwrite(data_, sizeof(unsigned char), size_, bmp_file.get());
+            fwrite(data_.get(), sizeof(unsigned char), size_, bmp_file.get());
         }
 
         void ComposeAlpha(const BMPFile& other) {
@@ -101,11 +90,11 @@ class BMPFile {
             }
 
             for(int i = BMP_HEADER_END; i < size_; i += BYTES_PER_PIXEL){
-                unsigned char src_alpha = other.data_[i + 3];
+                unsigned char src_alpha = other.data_.get()[i + 3];
 
-                int* dest_pixel_pointer = reinterpret_cast<int*>(data_ + i);
+                int* dest_pixel_pointer = reinterpret_cast<int*>(data_.get() + i);
                 __m128i dest_colors = _mm_cvtsi32_si128(*dest_pixel_pointer);     //loaded pixel data to first 32 bits of vector
-                int src_pixel = *(reinterpret_cast<int*>(other.data_ + i));
+                int src_pixel = *(reinterpret_cast<int*>(other.data_.get() + i));
                 __m128i src_colors = _mm_cvtsi32_si128(src_pixel); 
 
                 __m128i src_alpha_vec = _mm_set1_epi32(src_alpha); //load vector of 4 instances of 8-bit alpha
@@ -128,7 +117,7 @@ class BMPFile {
                 src_colors = _mm_shuffle_epi8(src_colors, rev_mask);
 
                 *dest_pixel_pointer = _mm_cvtsi128_si32(src_colors);
-                data_[i + 3] = MAX_ALPHA;
+                data_.get()[i + 3] = MAX_ALPHA;
             }
         }
 
