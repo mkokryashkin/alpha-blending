@@ -7,7 +7,9 @@
 #include <immintrin.h>
 #include <smmintrin.h>
 
-const int BMP_HEADER_END = 0x8a;
+const int BMP_FILE_SIZE_OFFSET = 0x2;
+const int BMP_FILE_OFFBITS_OFFSET = 0xA;
+
 const int BYTES_PER_PIXEL = 4;
 const unsigned char MAX_ALPHA = 255;
 const int MAX_ALPHA_POW = 8;
@@ -16,7 +18,8 @@ const int MAX_ALPHA_POW = 8;
 class BMPFile {
     private:
         std::unique_ptr<unsigned char> data_;
-        long long size_ = 0;
+        int size_ = 0;
+        int offbits_ = 0;
 
         class FileCloser {
             public:
@@ -35,12 +38,14 @@ class BMPFile {
 
         BMPFile(const BMPFile& other) {
             size_ = other.size_;
+            offbits_ = other.offbits_;
             data_ = std::unique_ptr<unsigned char>(new unsigned char[other.size_]());
             memcpy(data_.get(), other.data_.get(), size_);   
         }
 
         BMPFile& operator=(const BMPFile& other) {
             size_ = other.size_;
+            offbits_ = other.offbits_;
             data_ = std::unique_ptr<unsigned char>(new unsigned char[other.size_]());
             memcpy(data_.get(), other.data_.get(), size_);
             
@@ -63,15 +68,18 @@ class BMPFile {
                 throw std::runtime_error("This file does not exist!");
             }
             
-            fseek(bmp_file.get(), 0, SEEK_END);
-            size_ = ftell(bmp_file.get());
-            fseek(bmp_file.get(), 0, SEEK_SET);
+            fseek(bmp_file.get(), BMP_FILE_SIZE_OFFSET, SEEK_SET);
+            fread(&size_, sizeof(int), 1, bmp_file.get());
 
+            fseek(bmp_file.get(), BMP_FILE_OFFBITS_OFFSET, SEEK_SET);
+            fread(&offbits_, sizeof(int), 1, bmp_file.get());
+
+            fseek(bmp_file.get(), 0, SEEK_SET);
             data_ = std::unique_ptr<unsigned char>(new unsigned char[size_]());
             fread(data_.get(), sizeof(unsigned char), size_, bmp_file.get());
         }
 
-        long long Size() const noexcept {
+        int Size() const noexcept {
             return size_;
         }
 
@@ -85,11 +93,7 @@ class BMPFile {
         }
 
         void ComposeAlpha(const BMPFile& other, int x, int y) {
-            if(other.width_ > width_ || other.height_ > height_){
-                throw std::runtime_error("Argument picture must be smaller ot the same size with method owner!");
-            }
-
-            for(int i = BMP_HEADER_END; i < size_; i += BYTES_PER_PIXEL){
+            for(int i = offbits_; i < size_; i += BYTES_PER_PIXEL){
                 unsigned char src_alpha = other.data_.get()[i + 3];
 
                 int* dest_pixel_pointer = reinterpret_cast<int*>(data_.get() + i);
@@ -124,6 +128,7 @@ class BMPFile {
         friend void swap(BMPFile& first, BMPFile& second) noexcept {
             std::swap(first.data_, second.data_);
             std::swap(first.size_, second.size_);
+            std::swap(first.offbits_, second.offbits_);
         }
     
 };
