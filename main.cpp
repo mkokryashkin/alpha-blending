@@ -129,35 +129,44 @@ class BMPFile {
         }
 
         void ComposeAlpha(const BMPFile& other, int x, int y) {
-            for(int i = 0; i < psize_; i += BYTES_PER_PIXEL){
-                unsigned char src_alpha = other.data_.get()[i + 3];
+            if(x + other.width_ > width_ || y + other.height_ > height_){
+                throw std::runtime_error("Argument picture must be smaller than dest!");
+            }
 
-                int* dest_pixel_pointer = reinterpret_cast<int*>(data_.get() + i);
-                __m128i dest_colors = _mm_cvtsi32_si128(*dest_pixel_pointer);     //loaded pixel data to first 32 bits of vector
-                int src_pixel = *(reinterpret_cast<int*>(other.data_.get() + i));
-                __m128i src_colors = _mm_cvtsi32_si128(src_pixel); 
+            for(int i = 0; i < other.height_ ; ++i) {
+                for(int j = 0; j < other.width_; ++j) {
+                    int src_position = i * other.width_ * BYTES_PER_PIXEL + j * BYTES_PER_PIXEL;
+                    int dest_position = (y + i) * width_ * BYTES_PER_PIXEL + (x + j) * BYTES_PER_PIXEL;
 
-                __m128i src_alpha_vec = _mm_set1_epi32(src_alpha); //load vector of 4 instances of 8-bit alpha
-                __m128i alpha_vec = _mm_set1_epi32(MAX_ALPHA - src_alpha);
+                     unsigned char src_alpha = other.data_.get()[src_position + 3];
 
-                //mask for rearraging RGB pixels data
-                __m128i mask = _mm_setr_epi8(0, 0x80, 0x80, 0x80, 1, 0x80, 0x80, 0x80, 2, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80); 
-                dest_colors = _mm_shuffle_epi8(dest_colors, mask);
-                src_colors = _mm_shuffle_epi8(src_colors, mask); // rearranging rgb data
+                    int* dest_pixel_pointer = reinterpret_cast<int*>(data_.get() + dest_position);
+                    __m128i dest_colors = _mm_cvtsi32_si128(*dest_pixel_pointer);     //loaded pixel data to first 32 bits of vector
+                    int src_pixel = *(reinterpret_cast<int*>(other.data_.get() + src_position));
+                    __m128i src_colors = _mm_cvtsi32_si128(src_pixel); 
+
+                    __m128i src_alpha_vec = _mm_set1_epi32(src_alpha); //load vector of 4 instances of 8-bit alpha
+                    __m128i alpha_vec = _mm_set1_epi32(MAX_ALPHA - src_alpha);
+
+                    //mask for rearraging RGB pixels data
+                    __m128i mask = _mm_setr_epi8(0, 0x80, 0x80, 0x80, 1, 0x80, 0x80, 0x80, 2, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80); 
+                    dest_colors = _mm_shuffle_epi8(dest_colors, mask);
+                    src_colors = _mm_shuffle_epi8(src_colors, mask); // rearranging rgb data
 
 
-                dest_colors = _mm_mullo_epi32(dest_colors, alpha_vec); //applying alpha to dest
-                src_colors = _mm_mullo_epi32(src_colors, src_alpha_vec); //applying alpha to src
-                src_colors = _mm_add_epi32(src_colors, dest_colors);
+                    dest_colors = _mm_mullo_epi32(dest_colors, alpha_vec); //applying alpha to dest
+                    src_colors = _mm_mullo_epi32(src_colors, src_alpha_vec); //applying alpha to src
+                    src_colors = _mm_add_epi32(src_colors, dest_colors);
 
-                __m128i shift =  _mm_setr_epi32(MAX_ALPHA_POW, 0, 0, 0); 
-                src_colors = _mm_sra_epi32(src_colors, shift);
+                    __m128i shift =  _mm_setr_epi32(MAX_ALPHA_POW, 0, 0, 0); 
+                    src_colors = _mm_sra_epi32(src_colors, shift);
 
-                __m128i rev_mask = _mm_setr_epi8(0, 4, 8, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80);
-                src_colors = _mm_shuffle_epi8(src_colors, rev_mask);
+                    __m128i rev_mask = _mm_setr_epi8(0, 4, 8, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80);
+                    src_colors = _mm_shuffle_epi8(src_colors, rev_mask);
 
-                *dest_pixel_pointer = _mm_cvtsi128_si32(src_colors);
-                data_.get()[i + 3] = MAX_ALPHA;
+                    *dest_pixel_pointer = _mm_cvtsi128_si32(src_colors);
+                    data_.get()[dest_position + 3] = MAX_ALPHA;
+                }
             }
         }
 
@@ -178,7 +187,5 @@ int main() {
     auto book_file = BMPFile("pictures/book.bmp");
     cat_file.ComposeAlpha(book_file, 0, 0);
     cat_file.SaveToFile("pictures/composed.bmp");
-    std::cout << "height: " << cat_file.Height() << std::endl;
-    std::cout << "width: " << cat_file.Width() << std::endl; 
     return 0;
 }
