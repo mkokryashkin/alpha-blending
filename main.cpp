@@ -156,15 +156,15 @@ class BMPFile {
 
                     dest_colors = _mm_mullo_epi32(dest_colors, alpha_vec); //applying alpha to dest
                     src_colors = _mm_mullo_epi32(src_colors, src_alpha_vec); //applying alpha to src
-                    src_colors = _mm_add_epi32(src_colors, dest_colors);
+                    __m128i res_colors = _mm_add_epi32(src_colors, dest_colors);
 
                     __m128i shift =  _mm_setr_epi32(MAX_ALPHA_POW, 0, 0, 0); 
-                    src_colors = _mm_sra_epi32(src_colors, shift);
+                    res_colors = _mm_sra_epi32(res_colors, shift);
 
                     __m128i rev_mask = _mm_setr_epi8(0, 4, 8, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80);
-                    src_colors = _mm_shuffle_epi8(src_colors, rev_mask);
+                    res_colors = _mm_shuffle_epi8(res_colors, rev_mask);
 
-                    *dest_pixel_pointer = _mm_cvtsi128_si32(src_colors);
+                    *dest_pixel_pointer = _mm_cvtsi128_si32(res_colors);
                     data_.get()[dest_position + 3] = MAX_ALPHA;
                 }
             }
