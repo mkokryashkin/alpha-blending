@@ -117,9 +117,9 @@ class BMPFile {
             fwrite(data_.get(), sizeof(unsigned char), size_, bmp_file.get());
         }
 
-        void ComposeAlpha(const BMPFile& other) {
-            if(other.size_ != size_){
-                throw std::runtime_error("Both pictures must be the same size!");
+        void ComposeAlpha(const BMPFile& other, int x, int y) {
+            if(other.width_ > width_ || other.height_ > height_){
+                throw std::runtime_error("Argument picture must be smaller ot the same size with method owner!");
             }
 
             for(int i = pixel_data_start_; i < size_; i += BYTES_PER_PIXEL){
@@ -167,7 +167,7 @@ class BMPFile {
 int main() {
     auto cat_file = BMPFile("pictures/cat.bmp");
     auto book_file = BMPFile("pictures/book.bmp");
-    cat_file.ComposeAlpha(book_file);
+    cat_file.ComposeAlpha(book_file, 0, 0);
     cat_file.SaveToFile("pictures/composed.bmp");
     std::cout << "height: " << cat_file.Height() << std::endl;
     std::cout << "width: " << cat_file.Width() << std::endl;
