@@ -22,16 +22,23 @@ class BMPFile {
 
         int size_ = 0;
         int offbits_ = 0;
+        int psize_ = 0;
 
-        void copyData(const BMPFile& other) {
+        void CopyData(const BMPFile& other) {
             size_ = other.size_;
             offbits_ = other.offbits_;
+            psize_ = other.psize_;
 
-            data_ = std::unique_ptr<unsigned char[]>(new unsigned char[size_ - offbits_]());
+            data_ = std::unique_ptr<unsigned char[]>(new unsigned char[psize_]());
             header_ = std::unique_ptr<unsigned char[]>(new unsigned char[offbits_]());
 
-            memcpy(data_.get(), other.data_.get(), size_ - offbits_);  
+            memcpy(data_.get(), other.data_.get(), psize_);  
             memcpy(header_.get(), other.header_.get(), offbits_);
+        }
+
+        void ReadProperty(int& member, int offset, FILE* file) {
+            fseek(file, offset, SEEK_SET);
+            fread(&member, sizeof(int), 1, file);
         }
 
         class FileCloser {
@@ -46,15 +53,15 @@ class BMPFile {
         };
 
     public:
-        BMPFile() noexcept : size_(0), offbits_(0){}
+        BMPFile() noexcept : size_(0), offbits_(0), psize_(0){}
         ~BMPFile() = default;
 
         BMPFile(const BMPFile& other) {
-             copyData(other);
+             CopyData(other);
         }
 
         BMPFile& operator=(const BMPFile& other) {
-            copyData(other);
+            CopyData(other);
             return *this;
         }
 
@@ -74,20 +81,19 @@ class BMPFile {
                 throw std::runtime_error("This file does not exist!");
             }
             
-            fseek(bmp_file.get(), BMP_FILE_SIZE_OFFSET, SEEK_SET);
-            fread(&size_, sizeof(int), 1, bmp_file.get());
+            ReadProperty(size_, BMP_FILE_SIZE_OFFSET, bmp_file.get());
+            ReadProperty(offbits_, BMP_FILE_OFFBITS_OFFSET, bmp_file.get());
 
-            fseek(bmp_file.get(), BMP_FILE_OFFBITS_OFFSET, SEEK_SET);
-            fread(&offbits_, sizeof(int), 1, bmp_file.get());
+            psize_ = size_ - offbits_;
 
             header_ = std::unique_ptr<unsigned char[]>(new unsigned char[offbits_]());
-            data_ = std::unique_ptr<unsigned char[]>(new unsigned char[size_ - offbits_]());
+            data_ = std::unique_ptr<unsigned char[]>(new unsigned char[psize_]());
 
             fseek(bmp_file.get(), 0, SEEK_SET);
             fread(header_.get(), sizeof(unsigned char), offbits_, bmp_file.get());
 
             fseek(bmp_file.get(), offbits_, SEEK_SET);
-            fread(data_.get(), sizeof(unsigned char), size_ - offbits_, bmp_file.get());
+            fread(data_.get(), sizeof(unsigned char), psize_, bmp_file.get());
         }
 
         int Size() const noexcept {
@@ -102,7 +108,7 @@ class BMPFile {
             auto bmp_file = std::unique_ptr<FILE, FileCloser>(fopen(filename, "w"), FileCloser());
             fwrite(header_.get(), sizeof(unsigned char), offbits_, bmp_file.get());
             fseek(bmp_file.get(), offbits_, SEEK_SET);
-            fwrite(data_.get(), sizeof(unsigned char), size_ - offbits_, bmp_file.get());
+            fwrite(data_.get(), sizeof(unsigned char), psize_, bmp_file.get());
         }
 
         void ComposeAlpha(const BMPFile& other, int x, int y) {
@@ -143,6 +149,7 @@ class BMPFile {
             std::swap(first.size_, second.size_);
             std::swap(first.offbits_, second.offbits_);
             std::swap(first.header_, second.header_);
+            std::swap(first.psize_, second.psize_);
         }
     
 };
