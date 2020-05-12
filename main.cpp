@@ -112,7 +112,7 @@ class BMPFile {
         }
 
         void ComposeAlpha(const BMPFile& other, int x, int y) {
-            for(int i = 0; i < size_; i += BYTES_PER_PIXEL){
+            for(int i = 0; i < psize_; i += BYTES_PER_PIXEL){
                 unsigned char src_alpha = other.data_.get()[i + 3];
 
                 int* dest_pixel_pointer = reinterpret_cast<int*>(data_.get() + i);
