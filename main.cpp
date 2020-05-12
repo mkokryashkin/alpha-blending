@@ -9,6 +9,9 @@
 
 const int BMP_FILE_SIZE_OFFSET = 0x2;
 const int BMP_FILE_OFFBITS_OFFSET = 0xA;
+const int BMP_FILE_WIDTH_OFFSET = 0x12;
+const int BMP_FILE_HEIGHT_OFFSET = 0x16;
+
 
 const int BYTES_PER_PIXEL = 4;
 const unsigned char MAX_ALPHA = 255;
@@ -23,11 +26,15 @@ class BMPFile {
         int size_ = 0;
         int offbits_ = 0;
         int psize_ = 0;
+        int width_ = 0;
+        int height_ = 0;
 
         void CopyData(const BMPFile& other) {
             size_ = other.size_;
             offbits_ = other.offbits_;
             psize_ = other.psize_;
+            width_ = other.width_;
+            height_ = other.height_;
 
             data_ = std::unique_ptr<unsigned char[]>(new unsigned char[psize_]());
             header_ = std::unique_ptr<unsigned char[]>(new unsigned char[offbits_]());
@@ -53,7 +60,7 @@ class BMPFile {
         };
 
     public:
-        BMPFile() noexcept : size_(0), offbits_(0), psize_(0){}
+        BMPFile() noexcept : size_(0), offbits_(0), psize_(0), width_(0), height_(0){}
         ~BMPFile() = default;
 
         BMPFile(const BMPFile& other) {
@@ -83,6 +90,8 @@ class BMPFile {
             
             ReadProperty(size_, BMP_FILE_SIZE_OFFSET, bmp_file.get());
             ReadProperty(offbits_, BMP_FILE_OFFBITS_OFFSET, bmp_file.get());
+            ReadProperty(width_, BMP_FILE_WIDTH_OFFSET, bmp_file.get());
+            ReadProperty(height_, BMP_FILE_HEIGHT_OFFSET, bmp_file.get());
 
             psize_ = size_ - offbits_;
 
@@ -98,6 +107,14 @@ class BMPFile {
 
         int Size() const noexcept {
             return size_;
+        }
+
+        int Height() const noexcept {
+            return height_;
+        }
+
+        int Width() const noexcept {
+            return width_;
         }
 
         const unsigned char* Data() const noexcept {
@@ -150,6 +167,8 @@ class BMPFile {
             std::swap(first.offbits_, second.offbits_);
             std::swap(first.header_, second.header_);
             std::swap(first.psize_, second.psize_);
+            std::swap(first.height_, second.height_);
+            std::swap(first.width_, second.width_);
         }
     
 };
@@ -159,5 +178,7 @@ int main() {
     auto book_file = BMPFile("pictures/book.bmp");
     cat_file.ComposeAlpha(book_file, 0, 0);
     cat_file.SaveToFile("pictures/composed.bmp");
+    std::cout << "height: " << cat_file.Height() << std::endl;
+    std::cout << "width: " << cat_file.Width() << std::endl; 
     return 0;
 }
