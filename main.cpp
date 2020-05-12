@@ -29,19 +29,6 @@ class BMPFile {
         int width_ = 0;
         int height_ = 0;
 
-        void CopyData(const BMPFile& other) {
-            size_ = other.size_;
-            offbits_ = other.offbits_;
-            psize_ = other.psize_;
-            width_ = other.width_;
-            height_ = other.height_;
-
-            data_ = std::unique_ptr<unsigned char[]>(new unsigned char[psize_]());
-            header_ = std::unique_ptr<unsigned char[]>(new unsigned char[offbits_]());
-
-            memcpy(data_.get(), other.data_.get(), psize_);  
-            memcpy(header_.get(), other.header_.get(), offbits_);
-        }
 
         void ReadProperty(int& member, int offset, FILE* file) {
             fseek(file, offset, SEEK_SET);
@@ -63,13 +50,22 @@ class BMPFile {
         BMPFile() noexcept : size_(0), offbits_(0), psize_(0), width_(0), height_(0){}
         ~BMPFile() = default;
 
-        BMPFile(const BMPFile& other) {
-             CopyData(other);
-        }
+        BMPFile(const BMPFile& other) = delete;
 
-        BMPFile& operator=(const BMPFile& other) {
-            CopyData(other);
-            return *this;
+        BMPFile& operator=(const BMPFile& other) = delete;
+
+        void DeepCopy(const BMPFile& other) {
+            size_ = other.size_;
+            offbits_ = other.offbits_;
+            psize_ = other.psize_;
+            width_ = other.width_;
+            height_ = other.height_;
+
+            data_ = std::unique_ptr<unsigned char[]>(new unsigned char[psize_]());
+            header_ = std::unique_ptr<unsigned char[]>(new unsigned char[offbits_]());
+
+            memcpy(data_.get(), other.data_.get(), psize_);  
+            memcpy(header_.get(), other.header_.get(), offbits_);
         }
 
         BMPFile(BMPFile&& other) noexcept {
@@ -142,27 +138,27 @@ class BMPFile {
 
                     int* dest_pixel_pointer = reinterpret_cast<int*>(data_.get() + dest_position);
                     __m128i dest_colors = _mm_cvtsi32_si128(*dest_pixel_pointer);     //loaded pixel data to first 32 bits of vector
-                    int src_pixel = *(reinterpret_cast<int*>(other.data_.get() + src_position));
-                    __m128i src_colors = _mm_cvtsi32_si128(src_pixel); 
+                    int src_pixel       = *(reinterpret_cast<int*>(other.data_.get() + src_position));
+                    __m128i src_colors  = _mm_cvtsi32_si128(src_pixel); 
 
                     __m128i src_alpha_vec = _mm_set1_epi32(src_alpha); //load vector of 4 instances of 8-bit alpha
-                    __m128i alpha_vec = _mm_set1_epi32(MAX_ALPHA - src_alpha);
+                    __m128i alpha_vec     = _mm_set1_epi32(MAX_ALPHA - src_alpha);
 
                     //mask for rearraging RGB pixels data
                     __m128i mask = _mm_setr_epi8(0, 0x80, 0x80, 0x80, 1, 0x80, 0x80, 0x80, 2, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80); 
-                    dest_colors = _mm_shuffle_epi8(dest_colors, mask);
-                    src_colors = _mm_shuffle_epi8(src_colors, mask); // rearranging rgb data
+                    dest_colors  = _mm_shuffle_epi8(dest_colors, mask);
+                    src_colors   = _mm_shuffle_epi8(src_colors, mask); // rearranging rgb data
 
 
-                    dest_colors = _mm_mullo_epi32(dest_colors, alpha_vec); //applying alpha to dest
-                    src_colors = _mm_mullo_epi32(src_colors, src_alpha_vec); //applying alpha to src
-                    __m128i res_colors = _mm_add_epi32(src_colors, dest_colors);
+                    __m128i dest_colors_alpha_applied = _mm_mullo_epi32(dest_colors, alpha_vec); //applying alpha to dest
+                    __m128i src_colors_alpha_applied  = _mm_mullo_epi32(src_colors, src_alpha_vec); //applying alpha to src
+                    __m128i res_colors                = _mm_add_epi32(src_colors_alpha_applied, dest_colors_alpha_applied);
 
                     __m128i shift =  _mm_setr_epi32(MAX_ALPHA_POW, 0, 0, 0); 
-                    res_colors = _mm_sra_epi32(res_colors, shift);
+                    res_colors    = _mm_sra_epi32(res_colors, shift);
 
                     __m128i rev_mask = _mm_setr_epi8(0, 4, 8, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80);
-                    res_colors = _mm_shuffle_epi8(res_colors, rev_mask);
+                    res_colors       = _mm_shuffle_epi8(res_colors, rev_mask);
 
                     *dest_pixel_pointer = _mm_cvtsi128_si32(res_colors);
                     data_.get()[dest_position + 3] = MAX_ALPHA;
