@@ -185,7 +185,7 @@ class BMPFile {
 int main() {
     auto cat_file = BMPFile("pictures/cat.bmp");
     auto book_file = BMPFile("pictures/book.bmp");
-    cat_file.ComposeAlpha(book_file, 0, 0);
+    cat_file.ComposeAlpha(book_file, 20, 400);
     cat_file.SaveToFile("pictures/composed.bmp");
     return 0;
 }
