@@ -29,12 +29,6 @@ class BMPFile {
         int width_ = 0;
         int height_ = 0;
 
-
-        void ReadProperty(int& member, int offset, FILE* file) {
-            fseek(file, offset, SEEK_SET);
-            fread(&member, sizeof(int), 1, file);
-        }
-
         class FileCloser {
             public:
                 FileCloser() = default;
