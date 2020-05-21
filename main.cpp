@@ -21,7 +21,7 @@ const int MAX_ALPHA_POW = 8;
 class BMPFile {
     private:
         std::unique_ptr<unsigned char[]> data_;
-        std::unique_ptr<unsigned char[]> header_;
+        unsigned char* bitmap_;
 
         int size_ = 0;
         int offbits_ = 0;
@@ -54,20 +54,6 @@ class BMPFile {
 
         BMPFile& operator=(const BMPFile& other) = delete;
 
-        void DeepCopy(const BMPFile& other) {
-            size_ = other.size_;
-            offbits_ = other.offbits_;
-            psize_ = other.psize_;
-            width_ = other.width_;
-            height_ = other.height_;
-
-            data_ = std::unique_ptr<unsigned char[]>(new unsigned char[psize_]());
-            header_ = std::unique_ptr<unsigned char[]>(new unsigned char[offbits_]());
-
-            memcpy(data_.get(), other.data_.get(), psize_);  
-            memcpy(header_.get(), other.header_.get(), offbits_);
-        }
-
         BMPFile(BMPFile&& other) noexcept {
             std::swap(*this, other);
         }
@@ -83,22 +69,19 @@ class BMPFile {
             if(!bmp_file.get()) {
                 throw std::runtime_error("This file does not exist!");
             }
-            
-            ReadProperty(size_, BMP_FILE_SIZE_OFFSET, bmp_file.get());
-            ReadProperty(offbits_, BMP_FILE_OFFBITS_OFFSET, bmp_file.get());
-            ReadProperty(width_, BMP_FILE_WIDTH_OFFSET, bmp_file.get());
-            ReadProperty(height_, BMP_FILE_HEIGHT_OFFSET, bmp_file.get());
+            fseek(bmp_file.get(), 0, SEEK_END);
+            size_ = ftell(bmp_file.get());
+            fseek(bmp_file.get(), 0, SEEK_SET);
 
+            data_ = std::unique_ptr<unsigned char[]>(new unsigned char[size_]());
+            fread(data_.get(), sizeof(unsigned char), size_, bmp_file.get());
+
+            width_ = *(reinterpret_cast<unsigned int*>(data_.get() + BMP_FILE_WIDTH_OFFSET));
+            height_ = *(reinterpret_cast<unsigned int*>(data_.get() + BMP_FILE_HEIGHT_OFFSET));
+            offbits_ = *(reinterpret_cast<unsigned int*>(data_.get() + BMP_FILE_OFFBITS_OFFSET));
             psize_ = size_ - offbits_;
 
-            header_ = std::unique_ptr<unsigned char[]>(new unsigned char[offbits_]());
-            data_ = std::unique_ptr<unsigned char[]>(new unsigned char[psize_]());
-
-            fseek(bmp_file.get(), 0, SEEK_SET);
-            fread(header_.get(), sizeof(unsigned char), offbits_, bmp_file.get());
-
-            fseek(bmp_file.get(), offbits_, SEEK_SET);
-            fread(data_.get(), sizeof(unsigned char), psize_, bmp_file.get());
+            bitmap_ = data_.get() + offbits_;
         }
 
         int Size() const noexcept {
@@ -119,9 +102,7 @@ class BMPFile {
 
         void SaveToFile(const char* filename) {
             auto bmp_file = std::unique_ptr<FILE, FileCloser>(fopen(filename, "w"), FileCloser());
-            fwrite(header_.get(), sizeof(unsigned char), offbits_, bmp_file.get());
-            fseek(bmp_file.get(), offbits_, SEEK_SET);
-            fwrite(data_.get(), sizeof(unsigned char), psize_, bmp_file.get());
+            fwrite(data_.get(), sizeof(unsigned char), size_, bmp_file.get());
         }
 
         void ComposeAlpha(const BMPFile& other, int x, int y) {
@@ -134,11 +115,11 @@ class BMPFile {
                     int src_position = i * other.width_ * BYTES_PER_PIXEL + j * BYTES_PER_PIXEL;
                     int dest_position = (y + i) * width_ * BYTES_PER_PIXEL + (x + j) * BYTES_PER_PIXEL;
 
-                     unsigned char src_alpha = other.data_.get()[src_position + 3];
+                     unsigned char src_alpha = other.bitmap_[src_position + 3];
 
-                    int* dest_pixel_pointer = reinterpret_cast<int*>(data_.get() + dest_position);
+                    int* dest_pixel_pointer = reinterpret_cast<int*>(bitmap_ + dest_position);
                     __m128i dest_colors = _mm_cvtsi32_si128(*dest_pixel_pointer);     //loaded pixel data to first 32 bits of vector
-                    int src_pixel       = *(reinterpret_cast<int*>(other.data_.get() + src_position));
+                    int src_pixel       = *(reinterpret_cast<int*>(other.bitmap_ + src_position));
                     __m128i src_colors  = _mm_cvtsi32_si128(src_pixel); 
 
                     __m128i src_alpha_vec = _mm_set1_epi32(src_alpha); //load vector of 4 instances of 8-bit alpha
@@ -161,7 +142,7 @@ class BMPFile {
                     res_colors       = _mm_shuffle_epi8(res_colors, rev_mask);
 
                     *dest_pixel_pointer = _mm_cvtsi128_si32(res_colors);
-                    data_.get()[dest_position + 3] = MAX_ALPHA;
+                    bitmap_[dest_position + 3] = MAX_ALPHA;
                 }
             }
         }
@@ -170,10 +151,10 @@ class BMPFile {
             std::swap(first.data_, second.data_);
             std::swap(first.size_, second.size_);
             std::swap(first.offbits_, second.offbits_);
-            std::swap(first.header_, second.header_);
             std::swap(first.psize_, second.psize_);
             std::swap(first.height_, second.height_);
             std::swap(first.width_, second.width_);
+            std::swap(first.bitmap_, second.bitmap_);
         }
     
 };

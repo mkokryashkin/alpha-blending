@@ -1,3 +1,0 @@
-/home/maxim/Programming/AsmCourse/alpha-blending/build/CMakeFiles/rebuild_cache.dir
-/home/maxim/Programming/AsmCourse/alpha-blending/build/CMakeFiles/blender.dir
-/home/maxim/Programming/AsmCourse/alpha-blending/build/CMakeFiles/edit_cache.dir
