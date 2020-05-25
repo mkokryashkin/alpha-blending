@@ -17,6 +17,26 @@ const int BYTES_PER_PIXEL = 4;
 const unsigned char MAX_ALPHA = 255;
 const int MAX_ALPHA_POW = 8;
 
+struct BMPHeader {
+    unsigned short      bfType              = 0;
+    unsigned int        bfSize              = 0;
+    unsigned short      bfReserved1         = 0;
+    unsigned short      bfReserved2         = 0;
+    unsigned int        bfOffBits           = 0;
+
+    unsigned int        bV5Size             = 0;
+    unsigned int        bV5Width            = 0;
+    unsigned int        bV5Height           = 0;
+    unsigned short      bV5Planes           = 0;
+    unsigned short      bV5BitCount         = 0;
+    unsigned int        biV5Compression     = 0;
+    unsigned int        bV5SizeImage        = 0;
+    unsigned int        bV5PelsPerMeter     = 0;
+    unsigned int        bV5YPelsPerMeter    = 0;
+    unsigned int        bV5ClrUsed          = 0;
+    unsigned int        bV5ClrImportant     = 0;
+};
+
 
 class BMPFile {
     private:
@@ -24,10 +44,7 @@ class BMPFile {
         unsigned char* bitmap_;
 
         int size_ = 0;
-        int offbits_ = 0;
-        int psize_ = 0;
-        int width_ = 0;
-        int height_ = 0;
+        BMPHeader header = {};
 
         class FileCloser {
             public:
@@ -41,7 +58,7 @@ class BMPFile {
         };
 
     public:
-        BMPFile() noexcept : size_(0), offbits_(0), psize_(0), width_(0), height_(0){}
+        BMPFile() noexcept : size_(0) {};
         ~BMPFile() = default;
 
         BMPFile(const BMPFile& other) = delete;
@@ -70,12 +87,8 @@ class BMPFile {
             data_ = std::unique_ptr<unsigned char[]>(new unsigned char[size_]());
             fread(data_.get(), sizeof(unsigned char), size_, bmp_file.get());
 
-            width_ = *(reinterpret_cast<unsigned int*>(data_.get() + BMP_FILE_WIDTH_OFFSET));
-            height_ = *(reinterpret_cast<unsigned int*>(data_.get() + BMP_FILE_HEIGHT_OFFSET));
-            offbits_ = *(reinterpret_cast<unsigned int*>(data_.get() + BMP_FILE_OFFBITS_OFFSET));
-            psize_ = size_ - offbits_;
-
-            bitmap_ = data_.get() + offbits_;
+            header = *(reinterpret_cast<BMPHeader*>(data_.get()));
+            bitmap_ = data_.get() + header.bfOffBits;
         }
 
         int Size() const noexcept {
@@ -83,11 +96,11 @@ class BMPFile {
         }
 
         int Height() const noexcept {
-            return height_;
+            return header.bV5Height;
         }
 
         int Width() const noexcept {
-            return width_;
+            return header.bV5Width;
         }
 
         const unsigned char* Data() const noexcept {
@@ -100,14 +113,14 @@ class BMPFile {
         }
 
         void ComposeAlpha(const BMPFile& other, int x, int y) {
-            if(x + other.width_ > width_ || y + other.height_ > height_){
+            if(x + other.Width() > Width() || y + other.Height() > Height()){
                 throw std::runtime_error("Argument picture must be smaller than dest!");
             }
 
-            for(int i = 0; i < other.height_ ; ++i) {
-                for(int j = 0; j < other.width_; ++j) {
-                    int src_position = i * other.width_ * BYTES_PER_PIXEL + j * BYTES_PER_PIXEL;
-                    int dest_position = (y + i) * width_ * BYTES_PER_PIXEL + (x + j) * BYTES_PER_PIXEL;
+            for(int i = 0; i < other.Height() ; ++i) {
+                for(int j = 0; j < other.Width(); ++j) {
+                    int src_position = i * other.Width() * BYTES_PER_PIXEL + j * BYTES_PER_PIXEL;
+                    int dest_position = (y + i) * Width() * BYTES_PER_PIXEL + (x + j) * BYTES_PER_PIXEL;
 
                      unsigned char src_alpha = other.bitmap_[src_position + 3];
 
@@ -144,10 +157,7 @@ class BMPFile {
         friend void swap(BMPFile& first, BMPFile& second) noexcept {
             std::swap(first.data_, second.data_);
             std::swap(first.size_, second.size_);
-            std::swap(first.offbits_, second.offbits_);
-            std::swap(first.psize_, second.psize_);
-            std::swap(first.height_, second.height_);
-            std::swap(first.width_, second.width_);
+            std::swap(first.header, second.header);
             std::swap(first.bitmap_, second.bitmap_);
         }
     
