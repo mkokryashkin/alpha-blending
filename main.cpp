@@ -17,25 +17,48 @@ const int BYTES_PER_PIXEL = 4;
 const unsigned char MAX_ALPHA = 255;
 const int MAX_ALPHA_POW = 8;
 
+#pragma pack(2)
 struct BMPHeader {
-    unsigned short      bfType              = 0;
-    unsigned int        bfSize              = 0;
-    unsigned short      bfReserved1         = 0;
-    unsigned short      bfReserved2         = 0;
-    unsigned int        bfOffBits           = 0;
+    uint16_t    bfType              = 0;
+    uint32_t    bfSize              = 0;
+    uint16_t    bfReserved1         = 0;
+    uint16_t    bfReserved2         = 0;
+    uint32_t    bfOffBits           = 0;
 
-    unsigned int        bV5Size             = 0;
-    unsigned int        bV5Width            = 0;
-    unsigned int        bV5Height           = 0;
-    unsigned short      bV5Planes           = 0;
-    unsigned short      bV5BitCount         = 0;
-    unsigned int        biV5Compression     = 0;
-    unsigned int        bV5SizeImage        = 0;
-    unsigned int        bV5PelsPerMeter     = 0;
-    unsigned int        bV5YPelsPerMeter    = 0;
-    unsigned int        bV5ClrUsed          = 0;
-    unsigned int        bV5ClrImportant     = 0;
+    uint32_t    bV5Size             = 0;
+    uint32_t    bV5Width            = 0;
+    uint32_t    bV5Height           = 0;
+    uint16_t    bV5Planes           = 0;
+    uint16_t    bV5BitCount         = 0;
+    uint32_t    biV5Compression     = 0;
+    uint32_t    bV5SizeImage        = 0;
+    uint32_t    bV5PelsPerMeter     = 0;
+    uint32_t    bV5YPelsPerMeter    = 0;
+    uint32_t    bV5ClrUsed          = 0;
+    uint32_t    bV5ClrImportant     = 0;
+    uint32_t    bV5RedMask          = 0;
+    uint32_t    bV5GreenMask        = 0;
+    uint32_t    bV5BlueMask         = 0;
+    uint32_t    bV5AlphaMask        = 0;
+    uint32_t    bV5Endpoints1       = 0;
+    uint32_t    bV5Endpoints2       = 0;
+    uint32_t    bV5Endpoints3       = 0;
+    uint32_t    bV5Endpoints4       = 0;
+    uint32_t    bV5Endpoints5       = 0;
+    uint32_t    bV5Endpoints6       = 0;
+    uint32_t    bV5Endpoints7       = 0;
+    uint32_t    bV5Endpoints8       = 0;
+    uint32_t    bV5Endpoints9       = 0;
+    uint32_t    bV5GammaRed         = 0;
+    uint32_t    bV5GammaGreen       = 0;
+    uint32_t    bV5GammaBlue        = 0;
+    uint32_t    bV5Intent           = 0;
+    uint32_t    bV5ProfileData      = 0;
+    uint32_t    bV5ProfileSize      = 0;
+    uint32_t    bV5Reserved         = 0;
+
 };
+#pragma pack(4)
 
 
 class BMPFile {
@@ -87,7 +110,7 @@ class BMPFile {
             data_ = std::unique_ptr<unsigned char[]>(new unsigned char[size_]());
             fread(data_.get(), sizeof(unsigned char), size_, bmp_file.get());
 
-            header = *(reinterpret_cast<BMPHeader*>(data_.get()));
+            memcpy(&header, data_.get(), sizeof(BMPHeader));
             bitmap_ = data_.get() + header.bfOffBits;
         }
 
