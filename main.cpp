@@ -17,45 +17,51 @@ const int BYTES_PER_PIXEL = 4;
 const unsigned char MAX_ALPHA = 255;
 const int MAX_ALPHA_POW = 8;
 
-#pragma pack(2)
-struct BMPHeader {
-    uint16_t    bfType              = 0;
-    uint32_t    bfSize              = 0;
-    uint16_t    bfReserved1         = 0;
-    uint16_t    bfReserved2         = 0;
-    uint32_t    bfOffBits           = 0;
 
-    uint32_t    bV5Size             = 0;
-    uint32_t    bV5Width            = 0;
-    uint32_t    bV5Height           = 0;
-    uint16_t    bV5Planes           = 0;
-    uint16_t    bV5BitCount         = 0;
-    uint32_t    biV5Compression     = 0;
-    uint32_t    bV5SizeImage        = 0;
-    uint32_t    bV5PelsPerMeter     = 0;
-    uint32_t    bV5YPelsPerMeter    = 0;
-    uint32_t    bV5ClrUsed          = 0;
-    uint32_t    bV5ClrImportant     = 0;
-    uint32_t    bV5RedMask          = 0;
-    uint32_t    bV5GreenMask        = 0;
-    uint32_t    bV5BlueMask         = 0;
-    uint32_t    bV5AlphaMask        = 0;
-    uint32_t    bV5Endpoints1       = 0;
-    uint32_t    bV5Endpoints2       = 0;
-    uint32_t    bV5Endpoints3       = 0;
-    uint32_t    bV5Endpoints4       = 0;
-    uint32_t    bV5Endpoints5       = 0;
-    uint32_t    bV5Endpoints6       = 0;
-    uint32_t    bV5Endpoints7       = 0;
-    uint32_t    bV5Endpoints8       = 0;
-    uint32_t    bV5Endpoints9       = 0;
-    uint32_t    bV5GammaRed         = 0;
-    uint32_t    bV5GammaGreen       = 0;
-    uint32_t    bV5GammaBlue        = 0;
-    uint32_t    bV5Intent           = 0;
-    uint32_t    bV5ProfileData      = 0;
-    uint32_t    bV5ProfileSize      = 0;
-    uint32_t    bV5Reserved         = 0;
+
+#pragma pack(2)
+struct CIEXYZ {
+    uint32_t    x = 0;
+    uint32_t    y = 0;
+    uint32_t    z = 0;
+};
+
+struct CIEXYZTRIPLE {
+    CIEXYZ  ciexyzRed = {};
+    CIEXYZ  ciexyzGreen = {};
+    CIEXYZ  ciexyzBlue = {};
+};
+
+struct BMPHeader {
+    uint16_t        bfType              = 0;
+    uint32_t        bfSize              = 0;
+    uint16_t        bfReserved1         = 0;
+    uint16_t        bfReserved2         = 0;
+    uint32_t        bfOffBits           = 0;
+
+    uint32_t        bV5Size             = 0;
+    uint32_t        bV5Width            = 0;
+    uint32_t        bV5Height           = 0;
+    uint16_t        bV5Planes           = 0;
+    uint16_t        bV5BitCount         = 0;
+    uint32_t        biV5Compression     = 0;
+    uint32_t        bV5SizeImage        = 0;
+    uint32_t        bV5PelsPerMeter     = 0;
+    uint32_t        bV5YPelsPerMeter    = 0;
+    uint32_t        bV5ClrUsed          = 0;
+    uint32_t        bV5ClrImportant     = 0;
+    uint32_t        bV5RedMask          = 0;
+    uint32_t        bV5GreenMask        = 0;
+    uint32_t        bV5BlueMask         = 0;
+    uint32_t        bV5AlphaMask        = 0;
+    CIEXYZTRIPLE    bV5Endpoints        = {};
+    uint32_t        bV5GammaRed         = 0;
+    uint32_t        bV5GammaGreen       = 0;
+    uint32_t        bV5GammaBlue        = 0;
+    uint32_t        bV5Intent           = 0;
+    uint32_t        bV5ProfileData      = 0;
+    uint32_t        bV5ProfileSize      = 0;
+    uint32_t        bV5Reserved         = 0;
 
 };
 #pragma pack(4)

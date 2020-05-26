@@ -80,15 +80,15 @@ include CMakeFiles/blender.dir/flags.make
 CMakeFiles/blender.dir/main.cpp.o: CMakeFiles/blender.dir/flags.make
 CMakeFiles/blender.dir/main.cpp.o: ../main.cpp
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/maxim/Programming/AsmCourse/alpha-blending/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/blender.dir/main.cpp.o"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/blender.dir/main.cpp.o -c /home/maxim/Programming/AsmCourse/alpha-blending/main.cpp
+	/usr/bin/g++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/blender.dir/main.cpp.o -c /home/maxim/Programming/AsmCourse/alpha-blending/main.cpp
 
 CMakeFiles/blender.dir/main.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/blender.dir/main.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/maxim/Programming/AsmCourse/alpha-blending/main.cpp > CMakeFiles/blender.dir/main.cpp.i
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/maxim/Programming/AsmCourse/alpha-blending/main.cpp > CMakeFiles/blender.dir/main.cpp.i
 
 CMakeFiles/blender.dir/main.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/blender.dir/main.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/maxim/Programming/AsmCourse/alpha-blending/main.cpp -o CMakeFiles/blender.dir/main.cpp.s
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/maxim/Programming/AsmCourse/alpha-blending/main.cpp -o CMakeFiles/blender.dir/main.cpp.s
 
 # Object files for target blender
 blender_OBJECTS = \
